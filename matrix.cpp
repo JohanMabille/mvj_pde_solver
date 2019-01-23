@@ -1,11 +1,3 @@
-//
-//  matrix.cpp
-//  pde_solver
-//
-//  Created by John Sibony on 04/01/2019.
-//  Copyright © 2019 John Sibony. All rights reserved.
-//
-
 #include <iostream>
 #include "matrix.hpp"
 #include <vector>
