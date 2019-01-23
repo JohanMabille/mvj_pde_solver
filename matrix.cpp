@@ -3,7 +3,7 @@
 #include <vector>
 #include <numeric>
 #include <string>
-
+ 
 // METHODS
 
 Tridiagonal_matrix::Tridiagonal_matrix(size_t N): _N(N)

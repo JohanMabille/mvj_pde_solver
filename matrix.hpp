@@ -5,7 +5,7 @@
 
 class Tridiagonal_matrix
 {
-    
+     
 public:
     
     Tridiagonal_matrix(size_t N);

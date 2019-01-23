@@ -3,7 +3,7 @@
 #include <limits>
 
 namespace dauphine
-{
+{ 
     double ncdf(double x)
     {
         return 0.5 * std::erfc(-x / std::sqrt(2));
