@@ -1,10 +1,10 @@
+
 #include <iostream>
 #include "solver.hpp"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
 
- 
 // METHODS
 
 

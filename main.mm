@@ -1,10 +1,10 @@
-#import <Foundation/Foundation.h>
+
 #include <ctime>
 #include <iostream>
 #include <vector>
 #include "matrix.hpp"
 #include "solver.hpp"
- 
+
 
 int main(int argc, const char * argv[]) {
     

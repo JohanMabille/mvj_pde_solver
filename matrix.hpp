@@ -1,3 +1,4 @@
+
 #ifndef matrix_hpp
 #define matrix_hpp
 
@@ -5,7 +6,7 @@
 
 class Tridiagonal_matrix
 {
-     
+
 public:
     
     Tridiagonal_matrix(size_t N);
