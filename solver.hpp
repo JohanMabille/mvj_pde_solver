@@ -1,10 +1,3 @@
-//
-//  solver.hpp
-//  pde_solver
-//
-//  Created by John Sibony on 12/01/2019.
-//  Copyright © 2019 John Sibony. All rights reserved.
-//
 
 #ifndef tridiagonal_solver_system_hpp
 #define tridiagonal_solver_system_hpp
@@ -14,7 +7,7 @@
 
 class Pde_solver
 {
-    
+
 public:
     
     Pde_solver();

@@ -1,10 +1,3 @@
-//
-//  matrix.hpp
-//  pde_solver
-//
-//  Created by John Sibony on 04/01/2019.
-//  Copyright © 2019 John Sibony. All rights reserved.
-//
 
 #ifndef matrix_hpp
 #define matrix_hpp
@@ -13,7 +6,7 @@
 
 class Tridiagonal_matrix
 {
-    
+
 public:
     
     Tridiagonal_matrix(size_t N);

@@ -1,15 +1,9 @@
-//
-//  tridiagonal_solver_system.cpp
-//  
-//
-
 
 #include <iostream>
 #include "solver.hpp"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
-
 
 // METHODS
 
