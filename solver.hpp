@@ -4,6 +4,7 @@
 
 #include <string>
 #include "matrix.hpp"
+#include "volatility.hpp"
 
 class Pde_solver
 {
@@ -23,7 +24,7 @@ private:
     
     const double _S0; // spot at t=0
     const double _T;
-    const double _sigma;
+    Volatility _sigma;
     const double _r;
     const double _theta;
     double _price; // price of the contract today

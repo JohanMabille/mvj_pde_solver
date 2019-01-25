@@ -8,7 +8,7 @@
 // METHODS
 
 
-Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary): _S0(S0), _T(T), _sigma(sigma), _r(r), _theta(theta), _price(0), _greeks(3, 0.), _Nx(Nx), _Nt(Nt), _dx(10*_sigma*sqrt(_T)/_Nx), _dt(_T/_Nt), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _payoff(payoff), _boundary(boundary), _value_boundary(value_boundary), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
+Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary): _S0(S0), _T(T), _sigma(sigma), _r(r), _theta(theta), _price(0), _greeks(3, 0.), _Nx(Nx), _Nt(Nt), _dx(10*sigma*sqrt(_T)/_Nx), _dt(_T/_Nt), _space_mesh(_Nx+1, 10*_sigma.vol()*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _payoff(payoff), _boundary(boundary), _value_boundary(value_boundary), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
 {
     define_matrixes();
     
@@ -17,10 +17,10 @@ Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T))); // build space mesh : centered in log(_S0) : first we created the discrete interval [0, 2c] of N+1 point by using the partial_sum function (= cummulative sum). So we have the set {0, 2c/N, 4c/N, ..., 2c} with c=5*_sigma*sqrt(_T). Then we translate the set by adding log(spot)-c to each point. So we have the set {log(spot)-c, ..., log(spot), ..., log(spot)+c}
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma.vol()*sqrt(_T))); // build space mesh : centered in log(_S0) : first we created the discrete interval [0, 2c] of N+1 point by using the partial_sum function (= cummulative sum). So we have the set {0, 2c/N, 4c/N, ..., 2c} with c=5*_sigma*sqrt(_T). Then we translate the set by adding log(spot)-c to each point. So we have the set {log(spot)-c, ..., log(spot), ..., log(spot)+c}
 }
 
-Pde_solver::Pde_solver(): _S0(100), _T(0.5), _sigma(0.2), _r(0.0), _theta(0.5), _price(0.), _greeks(3, 0.), _payoff(call), _Nx(500), _Nt(_T*365), _dx(10*_sigma*sqrt(_T)/_Nx), _dt((double)1/365), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _boundary("dirichlet"), _value_boundary({0, _S0*exp(5*_sigma*sqrt(_T))-100}), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
+Pde_solver::Pde_solver(): _S0(100), _T(1), _sigma(0.2), _r(0.0), _theta(0.5), _price(0.), _greeks(3, 0.), _payoff(call), _Nx(100), _Nt(_T*365), _dx(10*_sigma.vol()*sqrt(_T)/_Nx), _dt((double)1/365), _space_mesh(_Nx+1, 10*_sigma.vol()*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _boundary("dirichlet"), _value_boundary({0, _S0*exp(5*_sigma.vol()*sqrt(_T))-100}), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
 {
     define_matrixes();
     
@@ -29,16 +29,16 @@ Pde_solver::Pde_solver(): _S0(100), _T(0.5), _sigma(0.2), _r(0.0), _theta(0.5), 
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T)));
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma.vol()*sqrt(_T)));
     
 }
 
 void Pde_solver::define_matrixes()
 {
     // a(θ), b(θ), c(θ)
-    auto a = [&](double theta) { return -_dt*theta*(pow(_sigma,2)/(2*pow(_dx,2)) + (pow(_sigma,2)-_r)/(4*_dx)); };
-    auto b = [&](double theta) { return 1 + (pow(_sigma,2)*theta*_dt/pow(_dx,2)) + _r*theta*_dt; };
-    auto c = [&](double theta) { return _dt*theta*(-pow(_sigma,2)/(2*pow(_dx,2)) + (pow(_sigma,2)-_r)/(4*_dx)); };
+    auto a = [&](double theta) { return -_dt*theta*(pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (pow(_sigma.vol(),2)-_r)/(4*_dx)); };
+    auto b = [&](double theta) { return 1 + (pow(_sigma.vol(),2)*theta*_dt/pow(_dx,2)) + _r*theta*_dt; };
+    auto c = [&](double theta) { return _dt*theta*(-pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (pow(_sigma.vol(),2)-_r)/(4*_dx)); };
     
     if(_boundary=="dirichlet")
     {
@@ -85,7 +85,6 @@ void Pde_solver::pricing()
     
     for(std::size_t i=0; i<_Nt-1; i++)
     {
-        std::cout << i << std::endl;
         f = thomas_algorithm(_A, vector_system(f)); // compute f(n) knowing f(n+1)
     }
     

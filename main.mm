@@ -21,7 +21,7 @@ int main(int argc, const char * argv[]) {
     
     if(res=="y")
     {
-        double theorical_price = dauphine::bs_price(100, 100, 0.2, 0.5, true);
+        double theorical_price = dauphine::bs_price(100, 100, 0.2, 1, true);
         Pde_solver my_solver;
         my_solver.pricing();
         double price = my_solver.display_price();
