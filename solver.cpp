@@ -8,7 +8,7 @@
 // METHODS
 
 
-Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double dx, double dt,  double (*payoff)(double), std::string boundary, std::vector<double> value_boundary): _S0(S0), _T(T), _sigma(sigma), _r(r), _theta(theta), _Nx(Nx), _Nt(Nt), _dx(5*_sigma*sqrt(_T)), _dt(_T/_Nt), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _payoff(payoff), _boundary(boundary), _value_boundary(value_boundary), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
+Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta, double price, size_t Nx, size_t Nt, double dx, double dt,  double (*payoff)(double), std::string boundary, std::vector<double> value_boundary): _S0(S0), _T(T), _sigma(sigma), _r(r), _theta(theta), _price(price), _greeks(3, 0.), _Nx(Nx), _Nt(Nt), _dx(10*_sigma*sqrt(_T)/_Nx), _dt(_T/_Nt), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _payoff(payoff), _boundary(boundary), _value_boundary(value_boundary), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
 {
     define_matrixes();
 
@@ -17,28 +17,28 @@ Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T))); // build space mesh : centered in log(_S0)
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T))); // build space mesh : centered in log(_S0) : first we created the discrete interval [0, 2c] of N+1 point by using the partial_sum function (= cummulative sum). So we have the set {0, 2c/N, 4c/N, ..., 2c} with c=5*_sigma*sqrt(_T). Then we translate the set by adding log(spot)-c to each point. So we have the set {log(spot)-c, ..., log(spot), ..., log(spot)+c}
 }
 
-Pde_solver::Pde_solver(): _S0(100), _T(1), _sigma(0.2), _r(0.03), _theta(0.5), _payoff(call), _Nx(100), _Nt(_T*365), _dx(5*_sigma*sqrt(_T)), _dt((double)1/365), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _boundary("dirichlet"), _value_boundary({0, exp(_space_mesh[_Nx])-1500}), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
+Pde_solver::Pde_solver(): _S0(100), _T(1), _sigma(0.2), _r(0.0), _theta(0.5), _price(price), _greeks(3, 0.), _payoff(call), _Nx(100), _Nt(_T*365), _dx(10*_sigma*sqrt(_T)/_Nx), _dt((double)1/365), _space_mesh(_Nx+1, 10*_sigma*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _boundary("dirichlet"), _value_boundary({0, exp(_space_mesh[_Nx])-100}), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
 {
     define_matrixes();
 
     _time_mesh[0] = 0;
-    std::partial_sum(_time_mesh.begin(), _time_mesh.end(), _time_mesh.begin(), std::plus<double>());// build time mesh : (0, dt, 2dt, ... _Nt*dt)
+    std::partial_sum(_time_mesh.begin(), _time_mesh.end(), _time_mesh.begin(), std::plus<double>());
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T))); // build space mesh : centered in log(_S0)
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma*sqrt(_T)));
     
 }
 
 void Pde_solver::define_matrixes()
 {
     // a(θ), b(θ), c(θ)
-    auto a = [&](double theta) { return -_dt*_theta*(pow(_sigma,2)/(2*pow(_dx,2))) + (pow(_sigma,2)-_r)/(4*_dx); };
-    auto b = [&](double theta) { return 1 + pow(_sigma,2)*_theta*_dt/pow(_dx,2) + _r*_theta*_dt; };
-    auto c = [&](double theta) { return _dt* theta*(-pow(_sigma,2)/(2*pow(_dx,2)) + (pow(_sigma,2)-_r)/(4*_dx)); };
+    auto a = [&](double theta) { return -_dt*theta*(pow(_sigma,2)/(2*pow(_dx,2)) + (pow(_sigma,2)-_r)/(4*_dx)); };
+    auto b = [&](double theta) { return 1 + (pow(_sigma,2)*theta*_dt/pow(_dx,2)) + _r*theta*_dt; };
+    auto c = [&](double theta) { return _dt*theta*(-pow(_sigma,2)/(2*pow(_dx,2)) + (pow(_sigma,2)-_r)/(4*_dx)); };
     
     if(_boundary=="dirichlet")
     {
@@ -76,32 +76,45 @@ std::vector<double> Pde_solver::vector_system(const std::vector<double> &f) cons
     return res;
 }
 
-std::vector <double> Pde_solver::pricing(bool display) const
+Pde_solver::pricing()
 {
     std::cout << "Is A dominant ? (0,1) : " << bool(_A.is_dominant()) << std::endl; // look if A is dominant to apply thomas algorithm
     
     std::vector<double> f(_Nx-1, 0); // compute f(Nt) which os the terminal payoff
     std::transform(_space_mesh.begin(), _space_mesh.end(), f.begin(), [&](double arg1) { return (*_payoff)(exp(arg1)); });
     
-    for(std::size_t i=0; i<_Nt; i++)
+    for(std::size_t i=0; i<_Nt-1; i++)
     {
         f = thomas_algorithm(_A, vector_system(f)); // compute f(n) knowing f(n+1)
     }
     
-    if(display)
-    {
-        dispaly_price(f); // display f(0) : price of the contract at t=0
-    }
+    std::vector <std::vector <double>> res(2); // store 2 price vector in time to compute the theta later
+    res[1] = {f[(_Nx/2)-2], f[(_Nx/2)-1], f[(_Nx/2)]}; // prices around the forward at day 1
+    f = thomas_algorithm(_A, vector_system(f));
+    res[0] = {f[(_Nx/2)-2], f[(_Nx/2)-1], f[(_Nx/2)]}; // prices around the forward at day 0 (today)
     
-    return f;
+    _price = f[(_Nx/2)-1];
+    compute_greeks(res);
 }
 
-void Pde_solver::dispaly_price(const std::vector <double> &f) const
+void Pde_solver::compute_greeks(const std::vector <std::vector <double>> &f)
 {
-    for(std::size_t i=0; i<f.size(); i++)
-    {
-        std::cout << "Space index : " << i+1 << ", " << "Contract Price : " << f[i] << ", " << "Spot : " << exp(_space_mesh[i+1]) << std::endl;
-    }
+    double h_1 = exp(_space_mesh[(_Nx/2)+2])-exp(_space_mesh[(_Nx/2)+1]);
+    double h_2 = exp(_space_mesh[(_Nx/2)+1])-exp(_space_mesh[_Nx/2]);
+    
+    _greeks[0] = (f[0][2]-f[0][0])/(h_1+h_2); // delta
+    _greeks[1] = 2*(f[0][2]+f[0][0]-2*f[0][1]-_greeks[0]*(h_1-h_2))/(pow(h_1,2)+pow(h_2,2)); // gamma
+    _greeks[2] = f[1][1]-f[0][1]; // theta
+}
+
+double Pde_solver::display_price() const
+{
+    return _price;
+}
+
+std::vector <double> Pde_solver::display_greeks() const
+{
+    return _greeks;
 }
 
 
@@ -112,7 +125,7 @@ void Pde_solver::dispaly_price(const std::vector <double> &f) const
 
 double call(double S)
 {
-    return std::max(S-70, 0.); // call strike K=70
+    return std::max(S-100, 0.); // call strike K=70
 }
 
 std::vector<double> thomas_algorithm(const Tridiagonal_matrix &A, const std::vector<double> &y)
