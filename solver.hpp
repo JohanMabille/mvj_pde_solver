@@ -7,11 +7,11 @@
 
 class Pde_solver
 {
-
+    
 public:
     
     Pde_solver();
-    Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double dx, double dt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary);
+    Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary);
     void define_matrixes(); // method to compute _A, _Aprime, _u (will be called inside the constructor)
     std::vector<double> vector_system(const std::vector<double> &f) const; // the vector of the right member of : A(θ)f(n) = A(θ-1)f(n+1)+u. Need to first solve f(n+1) to then obtain the vector.
     void pricing();
@@ -42,7 +42,7 @@ private:
     Tridiagonal_matrix _A; // matrix A(θ) of the linear system to solve : A(θ)f(n) = A(θ-1)f(n+1)+u
     Tridiagonal_matrix _Aprime; // matrix A(θ-1) of the linear system to solve : A(θ)f(n) = A(θ-1)f(n+1)+u
     std::vector<double> _u; // vector b of the linear system to solve : A(θ)f(n) = A(θ-1)f(n+1)+u
-
+    
 };
 
 double call(double S); // payoff by default
