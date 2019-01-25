@@ -79,8 +79,9 @@ int main(int argc, const char * argv[]) {
         std::vector<double> value_boundary(2, 0);
         std::cout << "Initial value of " << type << " condition" << std::endl;
         std::cin >> value_boundary[0];
-        std::cout << "Terminal value of " << type << " condition" << std::endl;
+        std::cout << "Terminal value of " << type << " condition" << std::endl << std::endl;
         std::cin >> value_boundary[1];
+        std::cout << "If you want to change the payoff, please change it in the solver.cpp file" << std::endl;
         
         Pde_solver my_solver(S0, T, sigma, r, theta, Nx, Nt, call, type, value_boundary);
         my_solver.pricing();
