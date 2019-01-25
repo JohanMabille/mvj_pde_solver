@@ -16,6 +16,7 @@ int main(int argc, const char * argv[]) {
     
     double theorical_price = dauphine::bs_price(100, 100, 0.2, 1, true);
     Pde_solver my_solver;
+    my_solver.pricing();
     double price = my_solver.display_price();
     std::vector<double> greeks = my_solver.display_greeks();
     

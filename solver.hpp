@@ -11,7 +11,7 @@ class Pde_solver
 public:
     
     Pde_solver();
-    Pde_solver(double S0, double T, double sigma, double r, double theta, double price, size_t Nx, size_t Nt, double dx, double dt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary);
+    Pde_solver(double S0, double T, double sigma, double r, double theta, size_t Nx, size_t Nt, double dx, double dt, double (*payoff)(double), std::string boundary, std::vector<double> value_boundary);
     void define_matrixes(); // method to compute _A, _Aprime, _u (will be called inside the constructor)
     std::vector<double> vector_system(const std::vector<double> &f) const; // the vector of the right member of : A(θ)f(n) = A(θ-1)f(n+1)+u. Need to first solve f(n+1) to then obtain the vector.
     void pricing();
