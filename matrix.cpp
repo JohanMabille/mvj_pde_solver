@@ -3,11 +3,18 @@
 #include <vector>
 #include <numeric>
 #include <string>
+// Missing include
+#include <algorithm>
  
 // METHODS
 
 Tridiagonal_matrix::Tridiagonal_matrix(size_t N): _N(N)
 {
+    // With vector of vector, this can be put in the initializer list (before
+    // the body of the constructor)
+    // _tab(_N, std::vector<double>(_N, 0.));
+    // With strided index scheme, this is even simpler:
+    // _tab(_N * _N, 0.)
     _tab = new double *[_N]; // dynamic allocation of the pointer
     for (std::size_t i=0; i<_N; i++) // fill tab (pointer of pointer = matrix)
     {
@@ -18,6 +25,7 @@ Tridiagonal_matrix::Tridiagonal_matrix(size_t N): _N(N)
 
 Tridiagonal_matrix::Tridiagonal_matrix(Tridiagonal_matrix const& temp): _N(temp._N)
 {
+    // WIth vector of vector or 1D buffer, no need for that
     _tab = new double *[_N];
     for (std::size_t i=0; i<_N; i++)
     {
@@ -100,6 +108,8 @@ bool Tridiagonal_matrix::is_dominant() const
 
 std::vector<double> Tridiagonal_matrix::col(std::size_t j) const
 {
+    // Why storing array of row if you operate on columns
+    // (and not on rows)?
     std::vector<double> res(_N);
     for(std::size_t i=0; i<_N; i++)
     {
@@ -151,7 +161,8 @@ const std::vector<double> operator* (const Tridiagonal_matrix &A, const std::vec
 {
     size_t N = A.dim();
     std::vector<double> res(N, 0);
-    
+
+    // Product of a tridiagonal matrix with a vector should be a O(3N) algorithm, not O(N²)
     for (std::size_t i=0; i<N; i++)
     {
         for (std::size_t j=0; j<N; j++)

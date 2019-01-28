@@ -19,9 +19,22 @@ public:
     std::vector<double> col(std::size_t i) const; // ith column of A
     double det(size_t N); // compute the determinant of A (maybe helpfull for the pde solver to the LU decomposition). N : dimension of the current matrix computed (since the function is called by reccurence by taking into account the minor of the initial matrix, the dimension N change)
     
+    // You forgot to define assignment operator, thus the following will crash:
+    // Trigiagonal matrix a(10), b(10);
+    // ....
+    // a = b;
+    
+    // You prevent the generation of move constructor and move assign operator
+    // and don't implement them ...
+
 private:
     
     const size_t _N; // dimension
+    // Why double** instead of std::vector<std::vector<double>>?
+    // Besides, vector of vector (or array of array) is not efficient,
+    // Prefer strided scheme (1D buffer storing the rows one after the other
+    // or the columns one after the other);
+    // Storing n² numbers while the matrix is tridiagonal is pretty inefficient
     double **_tab; // data matrix
     
     friend const std::vector<double> operator* (const Tridiagonal_matrix&, const std::vector<double>&); // multiplication of a matrix with a vector

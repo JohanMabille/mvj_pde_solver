@@ -8,7 +8,8 @@
 #include <numeric>
 #include <cmath>
 
-int main(int argc, const char * argv[]) {
+//No const in main arguments
+int main(int argc, char* argv[]) {
     
     std::string res;
     while(res.compare("y")!=0 && res.compare("n")!=0)
