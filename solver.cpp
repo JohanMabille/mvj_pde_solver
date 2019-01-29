@@ -17,11 +17,22 @@ Pde_solver::Pde_solver(double S0, double T, double sigma, double r, double theta
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma.vol()*sqrt(_T))); // build space mesh : centered in log(_S0) : first we created the discrete interval [0, 2c] of N+1 point by using the partial_sum function (= cummulative sum). So we have the set {0, 2c/N, 4c/N, ..., 2c} with c=5*_sigma*sqrt(_T). Then we translate the set by adding log(spot)-c to each point. So we have the set {log(spot)-c, ..., log(spot), ..., log(spot)+c}
+    double lower_bound = log(_S0) - 5 * _sigma.vol()*sqrt(_T);
+    // Needs std prefix + include to compile. Besides, bind2nd is deprecated in C++11, prefer lambdas
+    // std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma.vol()*sqrt(_T))); // build space mesh : centered in log(_S0) : first we created the discrete interval [0, 2c] of N+1 point by using the partial_sum function (= cummulative sum). So we have the set {0, 2c/N, 4c/N, ..., 2c} with c=5*_sigma*sqrt(_T). Then we translate the set by adding log(spot)-c to each point. So we have the set {log(spot)-c, ..., log(spot), ..., log(spot)+c}
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), [lower_bound](double val) { return val + lower_bound; });
+
+    // The following is more efficient, it avoids traversing the vector twice:
+    // int i = 0;
+    // double dx = 10*_sigma.vol()*sqrt(_T)/_Nx;
+    // std::generate(_space_mesh.begin(), _space_mesh.end(), [&i, lower_bound]() { return lower_bound + i * dx; });
 }
 
 Pde_solver::Pde_solver(): _S0(100), _T(1), _sigma(0.2), _r(0.0), _theta(0.5), _price(0.), _greeks(3, 0.), _payoff(call), _Nx(100), _Nt(_T*365), _dx(10*_sigma.vol()*sqrt(_T)/_Nx), _dt((double)1/365), _space_mesh(_Nx+1, 10*_sigma.vol()*sqrt(_T)/_Nx), _time_mesh(_Nt+1, _dt), _boundary("dirichlet"), _value_boundary({0, _S0*exp(5*_sigma.vol()*sqrt(_T))-100}), _A(_Nx-1), _Aprime(_Nx-1), _u(_Nx-1, 0)
 {
+    // This is ugly copy / paste. Prefer private initialization function, or better in this case,
+    // delegating constructor
+
     define_matrixes();
     
     _time_mesh[0] = 0;
@@ -29,16 +40,19 @@ Pde_solver::Pde_solver(): _S0(100), _T(1), _sigma(0.2), _r(0.0), _theta(0.5), _p
     
     _space_mesh[0] = 0;
     std::partial_sum(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), std::plus<double>());
-    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), bind2nd(std::plus<double>(), log(_S0)-5*_sigma.vol()*sqrt(_T)));
+    double lower_bound = log(_S0) - 5 * _sigma.vol()*sqrt(_T);
+    std::transform(_space_mesh.begin(), _space_mesh.end(), _space_mesh.begin(), [lower_bound](double val) { return val + lower_bound; });
     
 }
 
 void Pde_solver::define_matrixes()
 {
     // a(θ), b(θ), c(θ)
-    auto a = [&](double theta) { return -_dt*theta*(pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (pow(_sigma.vol(),2)-_r)/(4*_dx)); };
+    // This is due to a typo in the subject and won't be considered as a mistake
+    auto a = [&](double theta) { return -_dt*theta*(pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (0.5*pow(_sigma.vol(),2)-_r)/(2*_dx)); };
     auto b = [&](double theta) { return 1 + (pow(_sigma.vol(),2)*theta*_dt/pow(_dx,2)) + _r*theta*_dt; };
-    auto c = [&](double theta) { return _dt*theta*(-pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (pow(_sigma.vol(),2)-_r)/(4*_dx)); };
+    // This is due to a typo in the subject and won't be considered as a mistake
+    auto c = [&](double theta) { return _dt*theta*(-pow(_sigma.vol(),2)/(2*pow(_dx,2)) + (0.5*pow(_sigma.vol(),2)-_r)/(2*_dx)); };
     
     if(_boundary=="dirichlet")
     {
@@ -70,6 +84,9 @@ void Pde_solver::define_matrixes()
 
 std::vector<double> Pde_solver::vector_system(const std::vector<double> &f) const
 {
+    // You're spending your time in a O(N²) operation while it could be
+    // O(3N) since you know that the matrix is tridiagonal. This prevents you from
+    // taking a thinner mesh to get better accuracy.
     std::vector<double> res = _Aprime*f;
     std::transform(res.begin(), res.end(), _u.begin(), res.begin(), std::plus<double>());
     
@@ -80,7 +97,8 @@ void Pde_solver::pricing()
 {
     std::cout << std::endl << "Is A dominant ? (0,1) : " << bool(_A.is_dominant()) << std::endl << std::endl; // look if A is dominant to apply thomas algorithm
     
-    std::vector<double> f(_Nx-1, 0); // compute f(Nt) which os the terminal payoff
+    // Typo leading to out of bound
+    std::vector<double> f(_Nx+1, 0); // compute f(Nt) which os the terminal payoff
     std::transform(_space_mesh.begin(), _space_mesh.end(), f.begin(), [&](double arg1) { return (*_payoff)(exp(arg1)); });
     
     for(std::size_t i=0; i<_Nt-1; i++)
